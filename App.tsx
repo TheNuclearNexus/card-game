@@ -20,12 +20,13 @@ function Circle(props: any) {
   return <View style={circle} />;
 };
 
-function EnemyCircle(props: any) {
+function ItemCircle(props: any) {
   const circle: StyleProp<ViewStyle> = {
     width: props.diameter,
     height: props.diameter,
     borderRadius: props.diameter / 2,
     backgroundColor: props.color,
+    zIndex: 0,
     position: 'absolute',
     top: Dimensions.get('window').height / 2 - props.y - props.diameter / 2,
     left: Dimensions.get('window').width / 2 - props.x - props.diameter / 2
@@ -51,28 +52,29 @@ function DashedCircle(props: any) {
 
 interface Item {
   x: number,
-  y: number
+  y: number,
+  type: 'item'|'marker'|'enemy'
 }
 
-
+let lastLocationUpdate = 0
+let items: Item[] = []
 export default function App() {
   const [location, setLocation] = useState({} as LocationObject);
   const [prevLocation, setPrevLocation] = useState({} as LocationObject)
-  const [lastLocationUpdate, setLastLocationUpdate] = useState(0)
   const [rotation, setRotation] = useState(0)
   const [accelSub, setAccelSub] = useState({} as Subscription)
   const [acceleration, setAcceleration] = useState({} as ThreeAxisMeasurement)
-  const [items, setItems] = useState([] as Item[])
   const [zoom, setZoom] = useState(0)
   const updateSpeed = 100; // In miliseconds
   const attackRange = 10;
 
   const dataUpdateLoop = async () => {
     //await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    let heading = await Location.getHeadingAsync()
+    // let heading = await Location.getHeadingAsync()
 
     if (prevLocation.coords == undefined && location.coords != undefined) {
       setPrevLocation(location)
+      return
     } else if (prevLocation.coords != undefined && location.coords != undefined && prevLocation.coords != location.coords) {
       let { latitude: aLat, longitude: aLong } = prevLocation.coords
       const { latitude: bLat, longitude: bLong } = location.coords
@@ -101,8 +103,7 @@ export default function App() {
       setPrevLocation(tempLocation)
 
     }
-    setRotation(Math.round(heading.trueHeading))
-    setTimeout(dataUpdateLoop, updateSpeed);
+    // setRotation(Math.round(heading.magHeading))
   }
 
   useEffect(() => {
@@ -112,60 +113,84 @@ export default function App() {
         alert('Permission to access location was denied');
         return;
       }
-      Location.watchPositionAsync({ accuracy: Location.Accuracy.Lowest }, (newLocation) => {
-        console.log('new location')
+      console.log('Starting to watch')
+      Location.watchPositionAsync({ accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 0.5 }, (newLocation) => {
+        console.log('new location', newLocation)
         setLocation(newLocation)
-        setLastLocationUpdate(Date.now())
+      })
+      Location.watchHeadingAsync((heading) => {
+        setRotation(heading.trueHeading)
       })
 
-      const location = await Location.getLastKnownPositionAsync()
-      if (location != null) {
-        setLocation(location)
-        setPrevLocation(location)
-        setLastLocationUpdate(Date.now())
+      // setInterval(dataUpdateLoop, updateSpeed);
 
-        const coords = LatLongToXY(location.coords.latitude, location.coords.longitude);
+
+      setAccelSub(Accelerometer.addListener((data) => {
+        setAcceleration(data)
+      }))
+
+
+      const lastKnown = await Location.getLastKnownPositionAsync()
+      if (lastKnown != null) {
+        
+        
+
+        console.log('got old local')
+
+        const coords = LatLongToXY(lastKnown.coords.latitude, lastKnown.coords.longitude);
 
         items.push({
           x: coords.x,
-          y: coords.y
+          y: coords.y + 3,
+          type: 'marker'
         })
 
         for (let i = 0; i < 3; i++) {
-          const item = {
+          const item: Item = {
             x: (Math.random() * 20 - 10) + coords.x,
-            y: (Math.random() * 20 - 10) + coords.y
+            y: (Math.random() * 20 - 10) + coords.y,
+            type: 'enemy'
           }
           item.x += item.x < 0 ? -10 : 10
           item.y += item.y < 0 ? -10 : 10
 
           items.push(item)
         }
-        setItems(items)
-        console.log(items)
-      }
-      setTimeout(dataUpdateLoop, updateSpeed);
 
-      setAccelSub(Accelerometer.addListener((data) => {
-        setAcceleration(data)
-      }))
+
+        lastLocationUpdate = Date.now()
+        setLocation(lastKnown)
+        // console.log(items)
+      }
 
     })();
   }, [setLocation]);
 
   const renderLocation = () => {
-    const coords = LatLongToXY(prevLocation.coords.latitude, prevLocation.coords.longitude)
+    if (location.coords === undefined) {
+      return (
+        <View style={{ left: 16, top: 32 }}>
+          <Text style={{ color: 'white' }}>Waiting for position update</Text>
+        </View>
+      )
+    }
+
+    let latitude = Math.round(location.coords.latitude * 1e5) / 1e5
+    let longitude = Math.round(location.coords.longitude * 1e5) / 1e5
+
+    const coords = LatLongToXY(latitude, longitude)
     return (
       <View>
         {renderItems(coords)}
         <View style={{ left: 16, top: 32 }}>
-          <Text style={{ color: 'white' }}>{location.coords.latitude}</Text>
-          <Text style={{ color: 'white' }}>{location.coords.longitude}</Text>
-          <Text style={{ color: 'white' }}>{rotation}</Text>
+          <Text style={{ color: 'white' }}>Lat: {latitude}</Text>
+          <Text style={{ color: 'white' }}>Lon: {longitude}</Text>
+          <Text style={{ color: 'white' }}>X:   {coords.x}</Text>
+          <Text style={{ color: 'white' }}>Y:   {coords.y}</Text>
+          {/* <Text style={{ color: 'white' }}>{rotation}</Text>
           <Text style={{ color: 'white' }}>{acceleration.x}</Text>
-          <Text style={{ color: 'white' }}>{acceleration.y}</Text>
-          <Text style={{ color: 'white' }}>{new Date(lastLocationUpdate).toLocaleTimeString()}</Text>
-          <Button title='Zoom' onPress={() => { setZoom((zoom + 1) % 20) }} />
+          <Text style={{ color: 'white' }}>{acceleration.y}</Text> */}
+          <Text style={{ color: 'white' }}>{new Date(location.timestamp).toLocaleTimeString()}</Text>
         </View>
       </View>
     )
@@ -183,10 +208,17 @@ export default function App() {
       const x = item.x - coords.x
       const y = item.y - coords.y
 
-      itemViews.push(
-        // <EnemyCircle key={i} diameter={12} x={y * meterToPixel} y={x * meterToPixel} />
-        <EnemyCircle key={i} color={Math.sqrt(x * x + y * y) <= attackRange ? '#DD2222' : '#441111'} diameter={12} x={(x * cosR - y * sinR) * meterToPixel / 2} y={(y * cosR + x * sinR) * meterToPixel / 2} />
-      )
+      const rX = (x * cosR - y * sinR) * meterToPixel / 2
+      const rY = (y * cosR + x * sinR) * meterToPixel / 2
+      if(item.type === 'enemy') {
+        itemViews.push(
+          <ItemCircle key={i} color={Math.sqrt(x * x + y * y) <= attackRange ? '#DD2222' : '#441111'} diameter={12} x={rX} y={rY} />
+        )
+      } else {
+        itemViews.push(
+          <ItemCircle key={i} color={'#1111AA'} diameter={12} x={rX} y={rY}/>
+        )
+      }
     }
 
     return (
@@ -200,13 +232,16 @@ export default function App() {
 
 
   return (
-    <View>
-      <StatusBar hidden></StatusBar>
-      {prevLocation.coords !== undefined && renderLocation()}
+    <View style={{backgroundColor:'#000', height: Dimensions.get('window').height}}>
+      <StatusBar hidden />
       <View style={styles.container}>
         <DashedCircle diameter={attackRange * meterToPixel} color='transparent' borderColor='#A0A0A0' borderWidth={2} />
+      </View>
+      {renderLocation()}
+      <View style={styles.container}>
         <Circle diameter={8} color='#2222DD' />
       </View>
+      <Button title='Zoom' onPress={() => { setZoom((zoom + 1) % 20) }} />
     </View>
   );
 }
@@ -214,7 +249,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',

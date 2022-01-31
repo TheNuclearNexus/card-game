@@ -62,6 +62,8 @@ export function LatLongToXY(latitude: number, longitude: number) {
         throw new RangeError('longitude out of range (must be between 180 deg W and 180 deg E)');
     }
 
+
+
     var latRad = toRadians(latitude);
     var latSin = Math.sin(latRad);
     var latCos = Math.cos(latRad);
@@ -104,7 +106,7 @@ export function LatLongToXY(latitude: number, longitude: number) {
     if (latitude < 0) northing += 1e7;
 
     return {
-        x: Math.round(easting),
-        y: Math.round(northing),
+        x: easting,
+        y: northing,
     }
 }
