@@ -10,6 +10,7 @@
     "eject": "expo eject"
   },
   "dependencies": {
+    "@expo/ngrok": "^2.5.0",
     "@types/utm": "^1.1.1",
     "expo": "~44.0.0",
     "expo-location": "~14.0.1",
