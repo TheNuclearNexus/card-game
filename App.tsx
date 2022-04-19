@@ -7,9 +7,11 @@ import { LatLongToXY } from './src/util/utm'
 import { toRadians } from './src/util/trig';
 import { Accelerometer, ThreeAxisMeasurement } from 'expo-sensors';
 import { Subscription } from 'expo-sensors/build/Pedometer';
-import client from './src/framework/objects/Client';
-import Overworld from './src/pages/Overworld';
-import Combat from './src/pages/Combat';
+import { Client } from './src/framework/objects/Client';
+import Overworld from './src/scenes/Overworld';
+import Combat from './src/scenes/Combat';
+import SceneManager, { setGlobalScene } from './src/framework/objects/SceneManager';
+import { getHeight, getWidth } from './src/util/screen';
 
 
 
@@ -251,42 +253,38 @@ let items: Item[] = []
 //   );
 // }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute',
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height
-  }
-});
-
 export default function App() {
+  const [id, setId] = useState<string>()
   function onLoad() {
-    // console.log('loaded')
+    console.log('loaded')
+    setId(Client.id)
   }
   function onTick() {
 
   }
 
   useEffect(() => {
-    client.on('load', onLoad)
-    client.on('tick', onTick)
+    Client.start()
+
+    const loadId = Client.on('load', onLoad)
+    const tickId = Client.on('tick', onTick)
   
-    client.start()
 
     return () => {
-      client.removeListener('load', onLoad)
-      client.removeListener('tick', onTick)
+      Client.removeListener('load', loadId)
+      Client.removeListener('tick', tickId)
     }
 
   }, [])
 
   return (
-    <View style={styles.container}>
-      <Overworld/>
-      <Combat/>
+    <View>
+      <SceneManager/>
+      <View style={{flexDirection: 'row', top: getHeight()-90, position: 'absolute', backgroundColor: 'gray', width: getWidth(), alignItems: 'center'}}>
+        <Button title='overworld' onPress={()=>{setGlobalScene('overworld')}}/>
+        <Button title='combat' onPress={()=>{setGlobalScene('combat')}}/>
+        {/* <Text>{id}</Text> */}
+      </View>
     </View>
   )
-}
+} 
