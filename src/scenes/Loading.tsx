@@ -11,7 +11,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: Dimensions.get('window').width,
         height: Dimensions.get('window').height,
-        backgroundColor: '#303037',
+        backgroundColor: '#2f3542',
         justifyContent: 'center',
         alignItems: 'center'
     }

@@ -12,6 +12,7 @@ import Overworld from './src/scenes/Overworld';
 import Combat from './src/scenes/Combat';
 import SceneManager, { setGlobalScene } from './src/framework/objects/SceneManager';
 import { getHeight, getWidth } from './src/util/screen';
+import Loading from './src/scenes/Loading';
 
 
 
@@ -279,7 +280,12 @@ export default function App() {
 
   return (
     <View>
-      <SceneManager/>
+      <StatusBar hidden />
+      <SceneManager>
+        <Loading key='loading' />
+        <Overworld key='overworld' />
+        <Combat key='combat'/>
+      </SceneManager>
       <View style={{flexDirection: 'row', top: getHeight()-90, position: 'absolute', backgroundColor: 'gray', width: getWidth(), alignItems: 'center'}}>
         <Button title='overworld' onPress={()=>{setGlobalScene('overworld')}}/>
         <Button title='combat' onPress={()=>{setGlobalScene('combat')}}/>

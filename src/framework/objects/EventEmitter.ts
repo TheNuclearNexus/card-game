@@ -34,13 +34,13 @@ export class EventEmitter {
         }
 
         const fireCallbacks = (callback: EventListener) => {
-            callback(...args);
+            callback(args);
         };
 
         for(const l in this._events[name]) {
             const listener = this._events[name][l]
             if(listener)
-                listener()
+                listener(...args)
         }
     }
 
