@@ -10,6 +10,7 @@ import { getCenter } from "../util/screen";
 import { toRadians } from "../util/trig";
 import { LatLongToXY } from "../util/utm";
 import ExpoLocation from "expo-location";
+import { pixelsInMeter, combatRange } from "../util/global_data";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -20,14 +21,14 @@ const styles = StyleSheet.create({
   }
 });
 
-
-const viewMeters = 200
-const pixelsInMeter = Dimensions.get('screen').width / viewMeters
+let location: LocationObject;
+let heading: LocationHeadingObject;
 
 export default function Overworld() {
-  const [location, setLocation] = useState<LocationObject>();
-  const [heading, setHeading] = useState<LocationHeadingObject>()
+  // const [location, setLocation] = useState<LocationObject>();
+  // const [heading, setHeading] = useState<LocationHeadingObject>()
   const [players, setPlayers] = useState<JSX.Element[]>([]);
+  const [error, setError] = useState<string>('')
   useEffect(() => {
     // let enemy = new Enemy(getCenter())
     // player = new Player(getCenter())
@@ -35,27 +36,47 @@ export default function Overworld() {
     // // Client.log(Platform.OS)
     function updatePlayers(location?: LocationObject, heading?: LocationHeadingObject) {
       // Client.log('Updating players')
-      if (!location || !location.coords) {
-        // Client.log('Exit early')
+      if (!location || !location.coords || !heading) {
+        // Client.log('Exit early' + location + location?.coords + heading)
         return
       }
       const { x: lX, y: lY } = LatLongToXY(location?.coords.latitude, location?.coords.longitude);
       // Client.log(`Location: ${lX}, ${lY}`)
       // Client.log(`Players: ${Client.players.length}`)
       const center = getCenter();
+      const cosR = Math.cos(toRadians(180 - heading.trueHeading))
+      const sinR = Math.sin(toRadians(180 - heading.trueHeading))
+      
+      
       setPlayers(Client.players.map(p => {
         let rX = lX - p.x;
         let rY = lY - p.y;
+        const dist = Math.sqrt(rX * rX + rY * rY)
+        let tX = -((rX * cosR) - (rY * sinR));
+        let tY = -((rX * sinR) + (rY * cosR));
         // Client.log(`[${p.id}] UTM      ${p.x}, ${p.y}`)
         // Client.log(`[${p.id}] Relative ${rX}, ${rY}`);
 
-        // rX = rX * Math.cos(toRadians(heading.magHeading)) - rY * Math.sin(toRadians(heading.magHeading));
-        // rY = rX * Math.sin(toRadians(heading.magHeading)) + rY * Math.cos(toRadians(heading.magHeading));
 
 
         return (
-          <View key={p.id} style={{ top: (rY * pixelsInMeter) + center.y, left: (rX * pixelsInMeter) + center.x }}>
-            <Circle diameter={14} color='#2f3542' borderColor='#ffffff' borderWidth={2} />
+          <View key={p.id} style={{ top: (tY * pixelsInMeter) + center.y, left: (tX * pixelsInMeter) + center.x}}>
+            <Circle diameter={20} color={dist <= combatRange ? '#1e90ff' : '#2f3542'} borderColor='#ffffff' borderWidth={2} onTouchStart={async () => {
+              if(dist > combatRange) return;
+
+              Client.log('trying battle')
+              setError('Waiting for response!')
+              
+              const resp = await Client.POST(`battle?id=start-battle&me=${Client.id}&op=${p.id}`)
+              setError('')
+              const text = resp.data
+              Client.log(text)
+              if(text !== 'ok') {
+                Client.log('failed' + text)
+                setError(text)
+                setTimeout(() => setError(''), 500)
+              }
+            }}/>
           </View>
         )
       }));
@@ -63,33 +84,46 @@ export default function Overworld() {
 
     // const interval = setInterval(updatePlayers, 50);
 
-    Client.on('location-update', (location: LocationObject) => {
-      setLocation(location);
+    const loc = Client.on('location-update', (newLocation: LocationObject) => {
+      location = newLocation ?? location;
       updatePlayers(location, heading);
+      // setLocation(newLocation);
 
     });
-    Client.on('update-players', () => {
+    const hea = Client.on('heading-update', (newHeading: LocationHeadingObject) => {
+      heading = newHeading ?? heading
+      updatePlayers(location, heading)
+    })
+
+    const pla = Client.on('update-players', () => {
       updatePlayers(location, heading);
     })
 
-    Client.on('load', async () => {
-      const lastLocation = await ExpoLocation.getLastKnownPositionAsync()
-      if(!lastLocation) return
-      setLocation(lastLocation);
-    })
+    // const loa = Client.on('load', async () => {
+    //   const lastLocation = await ExpoLocation.getLastKnownPositionAsync()
+    //   if(!lastLocation) return
+    //   setLocation(lastLocation);
+    // })
 
     // Client.on('tick', () => {
     //   updatePlayers(location, heading);
     // })
 
-    // return () => {clearInterval(interval)}
-  })
+    return () => {
+      Client.removeListener('location-update', loc)
+      Client.removeListener('update-players', pla)
+      Client.removeListener('heading-update', hea)
+      // Client.removeListener('load', loa)
+
+    }
+  }, [])
   return (
     <View style={styles.container}>
-      {players}
       <Player pos={getCenter()} />
-      <Text style={{ top: getCenter().y }}>{(location !== undefined && location.coords !== undefined) ? `${location.coords.latitude} ${location.coords.longitude}` : ''}</Text>
-      <Text style={{ top: getCenter().y + 10 }}>{(heading !== undefined) ? `${heading.magHeading}` : ''}</Text>
+      {players}
+      {error !== '' && <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', position: 'absolute', backgroundColor: 'black', opacity: 0.5}}> 
+        <Text style={{'color': 'white', fontSize: 20}}>{error}</Text>
+      </View>}
     </View>
   )
 }

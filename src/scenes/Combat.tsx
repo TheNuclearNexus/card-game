@@ -1,41 +1,63 @@
 /*
 Combat flow chart:
 
-function Attack(card, player) { //Attack function for a single row 1 card
+function Attack(card, opposingCard) {       //Attack function for a single row 1 card
 
-if(opponentBoard(card.column(), row 1) == null) //if there is no row 1 card opposing this one
+if(opposingCard == null)                    //if there is no row 1 card opposing this one
     opponentHP -= card.AP                   //reduce opponent's HP by this attacking card's AP
     return;
 
-if(opponentBoard(card.column(), row 2) == null) //if there is no row 2 card behind the blocking row 1 card
-    opponentHP -= (card.AP - opponentBoard(card.column(), 1).DP) //the opponent takes damage equal to 
-                                                                 //card's AP minus the defending card's DP
- if(opponentBoard(card.column(), 2) != null)     //if there is a row 2 card behind the blocking row 1 card
-    opponentBoard(card.column(), 2).HP -= (card.AP - opponentBoard(card.column(), 1).DP) //the row 2 card
-                                                                                         //takes damage
+if(cardBehind(opposingCard) == null)                         //if there is no row 2 card behind the blocking row 1 card
+    opponentHP -= (card.AP - opposingCard.DP)                           //the opponent takes damage equal to 
+                                                                        //card's AP minus the defending card's DP
+ if(cardBehind(opposingCard) != null)                            //if there is a row 2 card behind the blocking row 1 card
+    cardBehind(opposingCard).HP -= (card.AP - opposingCard.DP)   //the row 2 card
+                                                                        //takes damage
 
-card.ability() //calls a short method that does the effect of a card's ability
-status() //check if any player's HP or row 2 card's HP has fallen below 0 and responds accordingly
+card.ability()              //calls a short method that does the effect of a card's ability
+status(card, opposingCard)  //check if any player's HP or row 2 card's HP has fallen below 0 and responds accordingly
 
 }
 
-process should be repeated for all 4 cards for that player?
+process should be repeated for all 4 cards for that player,
+then all four for the opposing player
+
+function status(card, opposingCard) {
+
+    if(cardBehind(opposingCard).HP <= 0)    //destroy the row2 card behind opposing card
+        cardBehind(opposingCard) = null
+        setStats(opposingCard)              //reset the stats of the opposing card(as booster card is now destroyed)
+    
+    if(player1.HP <= 0) {
+        if(player2.HP <= 0)
+            gameEnd(condition: 0) //game is drawed (condition 0:draw, condition 1: P1 wins, condition 2: P2 wins)
+        gameEnd(condition 2)      //win for player 2
+    }
+    gameEnd(condition 1)          //win for player 1 
+
+}
 
 */
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { StyleSheet, View, Text } from "react-native";
 import Card from "../framework/components/Card";
-import { getHeight, getWidth } from "../util/screen";
+import Circle from "../framework/components/Circle";
+import HandCard from "../framework/components/HandCard";
+import { Battle, Row } from "../framework/interfaces/Battle";
+import ICard, { cardDatabase } from "../framework/interfaces/Card";
+import { Client } from "../framework/objects/Client";
+import { getCenter, getHeight, getWidth } from "../util/screen";
 
 const styles = StyleSheet.create({
     fullscreen: {
-        width: getWidth(), 
+        width: getWidth(),
         height: getHeight(),
+        padding: 0,
     },
     container: {
-        justifyContent: 'center', 
-        padding: 3, 
-        alignItems: 'center', 
+        justifyContent: 'flex-start',
+        padding: 8,
+        alignItems: 'center',
         backgroundColor: '#2f3542',
         width: '100%',
         height: '100%',
@@ -43,7 +65,7 @@ const styles = StyleSheet.create({
     row: {
         width: '100%',
         height: 120,
-        marginBottom: 2,
+        marginBottom: 4,
         flexDirection: 'row',
         justifyContent: 'space-around',
     }
@@ -51,35 +73,92 @@ const styles = StyleSheet.create({
 
 
 //hi
+function rowToCards(row: Row, mine: boolean, type: number, reverse?: boolean) {
+    return [          
+        <Card idx={0} key={`${mine}${type}0`} card={row[0]} mine={mine} type={type}/>,
+        <Card idx={1} key={`${mine}${type}1`} card={row[1]} mine={mine} type={type}/>,
+        <Card idx={2} key={`${mine}${type}2`} card={row[2]} mine={mine} type={type}/>,
+        <Card idx={3} key={`${mine}${type}3`} card={row[3]} mine={mine} type={type}/>
+    ]
+}
+
+function handToCards(hand: string[]) {
+    return hand.map((card, index) => {
+        const dbCard = cardDatabase.find(c => c.name === card);
+        if(dbCard)
+            return <HandCard key={index} idx={index} card={dbCard}/>
+    })
+}
+
+function TurnTimer({ startTime, endTime}: {startTime: number, endTime: number}) {
+    const diff = endTime - startTime;
+    const [time, setTime] = useState(0);
+    useEffect(() => {
+        const tick = Client.on('tick', () => {
+            setTime((Date.now() - startTime)/diff);
+        })
+        return () => Client.removeListener('tick', tick)
+    }, [])
+
+    return <View style={{width: `${time.toFixed(1)}%`, backgroundColor: 'white', height: '3px'}}></View>
+}
+
 export default function Combat() {
+    const [battle, setBattle] = useState<Battle | undefined>(undefined)
+    useEffect(() => {
+        const b = Client.on('battle-update', (battle: Battle) => {
+            Client.log('battle update')
+            setBattle(battle)
+        })
+        return () => {Client.removeListener('battle-update', b)}
+    }, [])
+
+    if (!battle) return <View><Text>Waiting...</Text></View>
+
+    let me = battle.playerA.id === Client.id ? battle.playerA : battle.playerB
+    let op = battle.playerA.id === Client.id ? battle.playerB : battle.playerA
+
     return (
         <View style={[styles.container, styles.fullscreen]}>
-            <View style={{height:32, width:'100%', marginTop:46, flexDirection: 'row'}}>
-                <View style={{backgroundColor: '#ff4757', height: '100%', width: '50%', paddingLeft: 32, justifyContent: 'center'}}>
-                    <Text style={{color: 'white'}}>20</Text> 
+            <View style={{ height: 32, width: '100%', flexDirection: 'row' }}>
+                <View style={{ backgroundColor: '#ff4757', height: '100%', width: '50%', paddingLeft: 32, justifyContent: 'flex-start', alignItems: 'center', flexDirection: 'row' }}>
+                    <Text style={{ color: 'white' }}>{me.hp}</Text>
+                    <View style={{marginLeft: 8, flexDirection: 'row', justifyContent: 'flex-start', width: '100%'}}>
+                        {me.lives === 2 && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
+                        {me.lives >= 1  && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
+                    </View>
                 </View>
-                <View style={{backgroundColor: '#1e90ff', height: '100%', width: '50%', justifyContent: 'center', paddingRight: 32, alignItems:'flex-end'}}>
-                    <Text style={{color: 'white'}}>20</Text> 
+                <View style={{ backgroundColor: '#1e90ff', height: '100%', width: '50%', justifyContent: 'flex-end', paddingRight: 32, alignItems: 'center', flexDirection: 'row' }}>
+                     <View style={{flexDirection: 'row-reverse', justifyContent: 'flex-start', width: '100%'}}>
+                        {op.lives === 2 && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
+                        {op.lives >= 1  && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
+                    </View>
+                    <Text style={{ color: 'white', marginLeft: 8 }}>{op.hp}</Text>
                 </View>
             </View>
+            <TurnTimer startTime={battle.turn.startTime} endTime={battle.turn.endTime}/>
+            <Text style={{color: 'white', fontSize: 20}}>Turn #{battle.turn.number}</Text>
             <View style={[styles.container]}>
-                <View style={[styles.row, { backgroundColor: "#747d8c" }]}> 
-                    <Card/>
-                    <Card/>
-                    <Card/>
-                    <Card/>
+                <View style={[styles.row, { marginTop: 16, backgroundColor: "#747d8c", borderTopLeftRadius: 8, borderTopRightRadius: 8 }]}>
+                    {rowToCards(op.row2, false, 2)}
                 </View>
-                <View style={[styles.row, { backgroundColor: "#a4b0be", borderColor: '#1e90ff', borderBottomWidth: 4 }]} />
+                <View style={[styles.row, { backgroundColor: "#a4b0be", borderBottomLeftRadius: 8, borderBottomRightRadius: 8, borderColor: '#1e90ff', borderBottomWidth: 4 }]}>
+                    {rowToCards(op.row1, false, 1)}
+                </View>
                 <View style={{ height: 5 }} />
-                <View style={[styles.row, { backgroundColor: "#a4b0be", borderColor: '#ff4757', borderTopWidth: 4 }]} />
-                <View style={[styles.row, { backgroundColor: "#747d8c" }]} />
+                <View style={[styles.row, { backgroundColor: "#a4b0be", borderTopLeftRadius: 8, borderTopRightRadius: 8, borderColor: '#ff4757', borderTopWidth: 4 }]}>
+                    {rowToCards(me.row1, true, 1)}
+                </View>
+                <View style={[styles.row, { backgroundColor: "#747d8c", borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }]}>
+                    {rowToCards(me.row2, true, 2)}
+                </View>
             </View>
-            <View style={{backgroundColor:'red', height:20}}>
-                
+            <View style={{position: 'absolute', top: getCenter().y * 2 - 168, padding: 6}}>
+                <View style={[styles.row, {backgroundColor: "#747d8c", borderRadius: 8, overflow: 'scroll'}]}>
+                    {handToCards(me.hand)}
+                </View>
             </View>
         </View>
     )
 }
-
-
 

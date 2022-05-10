@@ -286,11 +286,12 @@ export default function App() {
         <Overworld key='overworld' />
         <Combat key='combat'/>
       </SceneManager>
-      <View style={{flexDirection: 'row', top: getHeight()-90, position: 'absolute', backgroundColor: 'gray', width: getWidth(), alignItems: 'center'}}>
-        <Button title='overworld' onPress={()=>{setGlobalScene('overworld')}}/>
-        <Button title='combat' onPress={()=>{setGlobalScene('combat')}}/>
-        {/* <Text>{id}</Text> */}
-      </View>
     </View>
   )
+
+//   <View style={{flexDirection: 'row', top: getHeight()-90, position: 'absolute', backgroundColor: 'gray', width: getWidth(), alignItems: 'center'}}>
+//   <Button title='overworld' onPress={()=>{setGlobalScene('overworld')}}/>
+//   <Button title='combat' onPress={()=>{setGlobalScene('combat')}}/>
+//   {/* <Text>{id}</Text> */}
+// </View>
 } 

@@ -1,7 +1,8 @@
 import React from "react";
-import { StyleProp, View, ViewStyle } from "react-native";
+import { StyleProp, View, ViewProps, ViewStyle } from "react-native";
+import { Client } from "../objects/Client";
 
-interface CircleProps {
+interface CircleProps extends ViewProps {
     diameter: number,
     color?: string,
     borderColor?: string,
@@ -20,7 +21,11 @@ export default function Circle(props: CircleProps) {
         top: -props.diameter / 2,
         borderColor: props.borderColor
     }
-    return <View>
-        <View style={style}/>
-    </View>
+    return (
+        <View>
+            <View style={[style, props.style]}
+                {...props}
+            />
+        </View>
+    )
 }

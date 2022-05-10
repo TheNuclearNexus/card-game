@@ -2,14 +2,14 @@ import { LocationHeadingObject } from "expo-location";
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import Svg, { Defs, RadialGradient, Stop, ClipPath, G, Ellipse, Rect, Polygon } from "react-native-svg";
+import { combatRange, pixelsInMeter } from "../../util/global_data";
 import { getCenter } from "../../util/screen";
 import { toRadians } from "../../util/trig";
 import Circle from "../components/Circle";
 import { BaseObject } from "./BaseObject";
 import { Client } from "./Client";
 
-const speed = 1000 / 60
-const maxDiameter = 250
+const maxDiameter = combatRange * pixelsInMeter
 let curDiameter = 30
 
 const styles = StyleSheet.create({
@@ -75,7 +75,7 @@ export default function Player(props: any) {
     const [diameter, setDiameter] = useState(curDiameter)
     const [heading, setHeading] = useState(0)
     function onTick() {
-        curDiameter = (curDiameter + 1) % maxDiameter;
+        curDiameter = (curDiameter + 2) % maxDiameter;
         setDiameter(curDiameter)
     }
     function onHeading(heading: LocationHeadingObject) {
@@ -93,8 +93,9 @@ export default function Player(props: any) {
     }, [])
 
     return (<View style={{ left: props.pos.x, top: props.pos.y }}>
+        <Circle key="radarRange" diameter={maxDiameter} borderWidth={2} borderColor={`rgba(	164, 176, 190,1)`} />
         <Circle key="radar" diameter={diameter} borderWidth={2} borderColor={`rgba(	164, 176, 190,${(maxDiameter - diameter) / maxDiameter / 2})`} />
-        <View style={[styles.headingBox, { transform: [{ rotate: `${heading - 180}deg` }] }]}>
+        <View style={[styles.headingBox, { transform: [{ rotate: `180deg` }] }]}>
             <HeadingTriangle/>
         </View>
         <Circle key="playerIcon" diameter={14} color='#ff4757' borderColor='#ffffff' borderWidth={2} />

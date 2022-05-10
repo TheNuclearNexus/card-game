@@ -14,3 +14,4 @@ export function getHeight(): number {
 export function getWidth(): number {
     return Dimensions.get('window').width;
 }
+
