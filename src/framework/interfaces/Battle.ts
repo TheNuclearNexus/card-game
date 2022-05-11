@@ -23,6 +23,7 @@ export interface Battle{
     turn: {
         number: number,
         startTime: number,
-        endTime: number
+        endTime: number,
+        actions: {id: string, [key: string]: any}[]
     }
 }

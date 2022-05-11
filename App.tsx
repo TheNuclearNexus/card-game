@@ -13,6 +13,7 @@ import Combat from './src/scenes/Combat';
 import SceneManager, { setGlobalScene } from './src/framework/objects/SceneManager';
 import { getHeight, getWidth } from './src/util/screen';
 import Loading from './src/scenes/Loading';
+import { Deck } from './src/scenes/Deck';
 
 
 
@@ -285,6 +286,7 @@ export default function App() {
         <Loading key='loading' />
         <Overworld key='overworld' />
         <Combat key='combat'/>
+        <Deck key='deck'/>
       </SceneManager>
     </View>
   )

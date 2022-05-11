@@ -11,6 +11,18 @@ const sounds: {
 } = {
     'start-battle': {
         serverId: 'battle-start'
+    },
+    'win': {
+        serverId: 'win'
+    },
+    'loss': {
+        serverId: 'loss'
+    },
+    'play-card': {
+        serverId: 'play-card'
+    },
+    'destroy-card': {
+        serverId: 'destroy-card'
     }
 }
 
@@ -27,8 +39,7 @@ export default class SFX {
     public static async play(sound: string) {
         const soundData = sounds[sound]
         if (soundData.audio) {
-            await soundData.audio.setPositionAsync(0)
-            return soundData.audio.playAsync()
+            return soundData.audio.playFromPositionAsync(0)
         }
     }
 }

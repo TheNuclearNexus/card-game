@@ -4,6 +4,7 @@ import { url } from "../../util/global_data";
 import { getCenter } from "../../util/screen";
 import Card, { cardDatabase } from '../interfaces/Card'
 import { Client } from "../objects/Client";
+import SFX from "../objects/SFX";
 const styles = StyleSheet.create({
     cardShape: {
         justifyContent: 'space-evenly',
@@ -41,7 +42,10 @@ function EmptyCard(props: {mine:boolean, type: number, [key: string]: any}) {
 
     })
     return <View style={[styles.cardShape, {alignItems: 'center'}]} {...props} onTouchStart={async () => {
+        if(cardToPlay === -1) return
+
         await Client.POST(`battle?id=play-card&me=${Client.id}&from=${cardToPlay}&to=${props.idx}`)
+        SFX.play('play-card')
         resetFunc()
         
     }}>
@@ -74,7 +78,7 @@ export default function CardComponent(props: { idx: number, card?: Card, mine: b
     return (
         <View onTouchStart={() => setShowInfo(true)} onTouchEnd={() => setShowInfo(false)}>
             <View style={[styles.cardShape, { backgroundColor: "transparent", borderColor: props.mine ? '#ff4757' : '#1e90ff', borderWidth: 4, borderRadius: 8 }]}>
-                <Image source={{ uri: url + '/images?name=' + card.name }} style={{ width: '100%', height: '100%' }} />
+                <Image source={{ uri: url + '/images?name=' + card.name }} style={{ width: '100%', height: '100%', backgroundColor: '#2f3542' }} />
                 <View style={{position: 'absolute', top: 0, flexDirection: 'row', justifyContent: 'space-between', width: '100%', padding: 4}}>
                     {card.type === 2 &&
                     <Text style={{ color: colorFromCompare(card.HP, dbCard.HP) }}>{card.HP}</Text>}

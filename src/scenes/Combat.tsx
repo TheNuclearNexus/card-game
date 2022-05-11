@@ -46,6 +46,8 @@ import HandCard from "../framework/components/HandCard";
 import { Battle, Row } from "../framework/interfaces/Battle";
 import ICard, { cardDatabase } from "../framework/interfaces/Card";
 import { Client } from "../framework/objects/Client";
+import { setGlobalScene } from "../framework/objects/SceneManager";
+import SFX from "../framework/objects/SFX";
 import { getCenter, getHeight, getWidth } from "../util/screen";
 
 const styles = StyleSheet.create({
@@ -74,43 +76,63 @@ const styles = StyleSheet.create({
 
 //hi
 function rowToCards(row: Row, mine: boolean, type: number, reverse?: boolean) {
-    return [          
-        <Card idx={0} key={`${mine}${type}0`} card={row[0]} mine={mine} type={type}/>,
-        <Card idx={1} key={`${mine}${type}1`} card={row[1]} mine={mine} type={type}/>,
-        <Card idx={2} key={`${mine}${type}2`} card={row[2]} mine={mine} type={type}/>,
-        <Card idx={3} key={`${mine}${type}3`} card={row[3]} mine={mine} type={type}/>
+    return [
+        <Card idx={0} key={`${mine}${type}0`} card={row[0]} mine={mine} type={type} />,
+        <Card idx={1} key={`${mine}${type}1`} card={row[1]} mine={mine} type={type} />,
+        <Card idx={2} key={`${mine}${type}2`} card={row[2]} mine={mine} type={type} />,
+        <Card idx={3} key={`${mine}${type}3`} card={row[3]} mine={mine} type={type} />
     ]
 }
 
 function handToCards(hand: string[]) {
     return hand.map((card, index) => {
         const dbCard = cardDatabase.find(c => c.name === card);
-        if(dbCard)
-            return <HandCard key={index} idx={index} card={dbCard}/>
+        if (dbCard)
+            return <HandCard key={index} idx={index} card={dbCard} />
     })
 }
 
-function TurnTimer({ startTime, endTime}: {startTime: number, endTime: number}) {
+function TurnTimer({ startTime, endTime }: { startTime: number, endTime: number }) {
     const diff = endTime - startTime;
     const [time, setTime] = useState(0);
     useEffect(() => {
         const tick = Client.on('tick', () => {
-            setTime((Date.now() - startTime)/diff);
+            let newTime = (Date.now() - startTime) / 1000;
+            newTime = Math.min(newTime * 100 / diff, 100)
+            setTime(newTime);
         })
         return () => Client.removeListener('tick', tick)
-    }, [])
+    }, [startTime, endTime])
 
-    return <View style={{width: `${time.toFixed(1)}%`, backgroundColor: 'white', height: '3px'}}></View>
+    return <View style={{ width: '100%', backgroundColor: '#57606f' }}>
+        <View style={{ width: `${time.toFixed(1)}%`, backgroundColor: 'white', height: 3 }}></View>
+    </View>
 }
 
 export default function Combat() {
     const [battle, setBattle] = useState<Battle | undefined>(undefined)
+    const [battleState, setBattleState] = useState<'active' | 'win' | 'loss'>('active')
     useEffect(() => {
-        const b = Client.on('battle-update', (battle: Battle) => {
+        const bU = Client.on('battle-update', (battle: Battle) => {
             Client.log('battle update')
+            for(let a of battle.turn.actions) {
+                if(a.id === 'draw')
+                    SFX.play('play-card')
+            }
+            // console.log(battle.turn.startTime, battle.turn.endTime)
             setBattle(battle)
         })
-        return () => {Client.removeListener('battle-update', b)}
+        const bE = Client.on('end-battle', async (type: 'win' | 'loss') => {
+            SFX.play(type)
+
+            setBattleState(type)
+            setTimeout(() => {
+                setBattle(undefined)
+                setBattleState('active')
+                setGlobalScene('overworld')
+            }, 4000)
+        })
+        return () => { Client.removeListener('battle-update', bU); Client.removeListener('end-battle', bE) }
     }, [])
 
     if (!battle) return <View><Text>Waiting...</Text></View>
@@ -118,26 +140,35 @@ export default function Combat() {
     let me = battle.playerA.id === Client.id ? battle.playerA : battle.playerB
     let op = battle.playerA.id === Client.id ? battle.playerB : battle.playerA
 
+    if (battleState === 'win' || battleState === 'loss') return (
+        <View style={[styles.container, {justifyContent: 'center'}]}>
+            <Text style={{color: 'white', fontSize:48}}>You {battleState === 'win' ? 'WIN!' : 'LOSE :('}</Text>
+        </View>
+    )
+
+
     return (
         <View style={[styles.container, styles.fullscreen]}>
             <View style={{ height: 32, width: '100%', flexDirection: 'row' }}>
                 <View style={{ backgroundColor: '#ff4757', height: '100%', width: '50%', paddingLeft: 32, justifyContent: 'flex-start', alignItems: 'center', flexDirection: 'row' }}>
                     <Text style={{ color: 'white' }}>{me.hp}</Text>
-                    <View style={{marginLeft: 8, flexDirection: 'row', justifyContent: 'flex-start', width: '100%'}}>
-                        {me.lives === 2 && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
-                        {me.lives >= 1  && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
+                    <View style={{ marginLeft: 8, flexDirection: 'row', justifyContent: 'flex-start', width: '100%' }}>
+                        {me.lives === 2 && <View style={{ backgroundColor: 'white', width: 8, height: 8, borderRadius: 4 }} />}
+                        {me.lives >= 1 && <View style={{ backgroundColor: 'white', width: 8, height: 8, borderRadius: 4 }} />}
                     </View>
                 </View>
                 <View style={{ backgroundColor: '#1e90ff', height: '100%', width: '50%', justifyContent: 'flex-end', paddingRight: 32, alignItems: 'center', flexDirection: 'row' }}>
-                     <View style={{flexDirection: 'row-reverse', justifyContent: 'flex-start', width: '100%'}}>
-                        {op.lives === 2 && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
-                        {op.lives >= 1  && <View style={{backgroundColor: 'white', width: 8, height: 8, borderRadius: 4}}/>}
+                    <View style={{ flexDirection: 'row-reverse', justifyContent: 'flex-start', width: '100%' }}>
+                        {op.lives === 2 && <View style={{ backgroundColor: 'white', width: 8, height: 8, borderRadius: 4 }} />}
+                        {op.lives >= 1 && <View style={{ backgroundColor: 'white', width: 8, height: 8, borderRadius: 4 }} />}
                     </View>
                     <Text style={{ color: 'white', marginLeft: 8 }}>{op.hp}</Text>
                 </View>
             </View>
-            <TurnTimer startTime={battle.turn.startTime} endTime={battle.turn.endTime}/>
-            <Text style={{color: 'white', fontSize: 20}}>Turn #{battle.turn.number}</Text>
+            <TurnTimer startTime={battle.turn.startTime} endTime={battle.turn.endTime} />
+            <View style={{ padding: 4, backgroundColor: '#57606f', borderRadius: 8, marginTop: 4 }}>
+                <Text style={{ color: 'white', fontSize: 20 }}>Turn #{battle.turn.number}</Text>
+            </View>
             <View style={[styles.container]}>
                 <View style={[styles.row, { marginTop: 16, backgroundColor: "#747d8c", borderTopLeftRadius: 8, borderTopRightRadius: 8 }]}>
                     {rowToCards(op.row2, false, 2)}
@@ -153,8 +184,8 @@ export default function Combat() {
                     {rowToCards(me.row2, true, 2)}
                 </View>
             </View>
-            <View style={{position: 'absolute', top: getCenter().y * 2 - 168, padding: 6}}>
-                <View style={[styles.row, {backgroundColor: "#747d8c", borderRadius: 8, overflow: 'scroll'}]}>
+            <View style={{ position: 'absolute', top: getCenter().y * 2 - 168, padding: 6 }}>
+                <View style={[styles.row, { backgroundColor: "#747d8c", borderRadius: 8, overflow: 'scroll' }]}>
                     {handToCards(me.hand)}
                 </View>
             </View>

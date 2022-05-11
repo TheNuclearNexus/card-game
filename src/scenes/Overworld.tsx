@@ -1,6 +1,6 @@
 import { LocationHeadingObject, LocationObject } from "expo-location";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Dimensions, Button, Platform } from "react-native";
+import { View, Text, StyleSheet, Dimensions, Button, Platform, TouchableOpacity } from "react-native";
 import Circle from "../framework/components/Circle";
 import { ObjectRenderer } from "../framework/objects/BaseObject";
 import { Client } from "../framework/objects/Client";
@@ -11,6 +11,7 @@ import { toRadians } from "../util/trig";
 import { LatLongToXY } from "../util/utm";
 import ExpoLocation from "expo-location";
 import { pixelsInMeter, combatRange } from "../util/global_data";
+import { setGlobalScene } from "../framework/objects/SceneManager";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -44,39 +45,39 @@ export default function Overworld() {
       // Client.log(`Location: ${lX}, ${lY}`)
       // Client.log(`Players: ${Client.players.length}`)
       const center = getCenter();
-      const cosR = Math.cos(toRadians(180 - heading.trueHeading))
-      const sinR = Math.sin(toRadians(180 - heading.trueHeading))
-      
-      
+      const cosR = Math.cos(toRadians(heading.trueHeading))
+      const sinR = Math.sin(toRadians(heading.trueHeading))
+
+
       setPlayers(Client.players.map(p => {
         let rX = lX - p.x;
         let rY = lY - p.y;
         const dist = Math.sqrt(rX * rX + rY * rY)
         let tX = -((rX * cosR) - (rY * sinR));
-        let tY = -((rX * sinR) + (rY * cosR));
+        let tY = ((rX * sinR) + (rY * cosR));
         // Client.log(`[${p.id}] UTM      ${p.x}, ${p.y}`)
         // Client.log(`[${p.id}] Relative ${rX}, ${rY}`);
 
 
 
         return (
-          <View key={p.id} style={{ top: (tY * pixelsInMeter) + center.y, left: (tX * pixelsInMeter) + center.x}}>
+          <View key={p.id} style={{ top: (tY * pixelsInMeter) + center.y, left: (tX * pixelsInMeter) + center.x }}>
             <Circle diameter={20} color={dist <= combatRange ? '#1e90ff' : '#2f3542'} borderColor='#ffffff' borderWidth={2} onTouchStart={async () => {
-              if(dist > combatRange) return;
+              if (dist > combatRange) return;
 
               Client.log('trying battle')
               setError('Waiting for response!')
-              
+
               const resp = await Client.POST(`battle?id=start-battle&me=${Client.id}&op=${p.id}`)
               setError('')
               const text = resp.data
               Client.log(text)
-              if(text !== 'ok') {
+              if (text !== 'ok') {
                 Client.log('failed' + text)
                 setError(text)
                 setTimeout(() => setError(''), 500)
               }
-            }}/>
+            }} />
           </View>
         )
       }));
@@ -121,9 +122,21 @@ export default function Overworld() {
     <View style={styles.container}>
       <Player pos={getCenter()} />
       {players}
-      {error !== '' && <View style={{width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', position: 'absolute', backgroundColor: 'black', opacity: 0.5}}> 
-        <Text style={{'color': 'white', fontSize: 20}}>{error}</Text>
-      </View>}
+      {error !== '' &&
+        <View style={{
+          width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center',
+          position: 'absolute', backgroundColor: 'black', opacity: 0.5
+        }}>
+          <Text style={{ 'color': 'white', fontSize: 20 }}>{error}</Text>
+        </View>}
+      <TouchableOpacity style={{
+        position: 'absolute', bottom: 32, left: 32, backgroundColor: '#ffa502',
+        width: 64, height: 64, borderRadius: 8, justifyContent: 'center', alignItems: 'center'
+      }} onPress={() => {
+        setGlobalScene('deck')
+      }}>
+        <View style={{ width: 40, height: 56, borderColor: 'white', borderWidth: 4, borderRadius: 8 }}></View>
+      </TouchableOpacity>
     </View>
   )
-}
+}   

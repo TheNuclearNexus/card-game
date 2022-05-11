@@ -10,7 +10,7 @@ import { setCardDatabase } from "../interfaces/Card";
 import ServerEvent from "../interfaces/ServerEvent";
 import { LatLongToXY } from "../../util/utm";
 import chalk from "chalk";
-import { setGlobalScene } from "./SceneManager";
+import { globalScene, setGlobalScene } from "./SceneManager";
 import { Battle } from "../interfaces/Battle";
 import { wait } from "../../util/async";
 import axios from "axios";
@@ -24,6 +24,7 @@ type ClientEvents =
     | 'heading-update'
     | 'battle-update'
     | 'update-players'
+    | 'end-battle'
 
 
 export class Client {
@@ -64,20 +65,28 @@ export class Client {
         }
     }
 
-    public static async POST(data: string) {
+    public static async POST(slug: string, data?: any) {
         // Client.lockAutoRequests = true
-        const finalUrl = url + `/${data}`
+        const finalUrl = url + `/${slug}`
         // console.log(finalUrl)
-        const resp = await axios.post(finalUrl, undefined, {timeout: 1000})
+        const resp = await axios.post(finalUrl, data, {timeout: 1000})
         // Client.lockAutoRequests = false
         return resp
     }
 
+    public static async GET(data: string) {
+        // Client.lockAutoRequests = true
+        const finalUrl = url + `/${data}`
+        // console.log(finalUrl)
+        const resp = await axios.get(finalUrl, {timeout: 1000})
+        return resp
+    }
 
 
     public static async start() {
         if (this._started) {
             Client.log('Client has already been started!')
+            setGlobalScene('overworld')
             return;
         }
         this._started = true;
@@ -109,6 +118,7 @@ export class Client {
         if (!info.isConnected)
             Client.log('No Internet Connection!')
         //#endregion
+        await SFX.loadSounds()
         //#region Connect to the server
         if (this._eventSource !== undefined)
             this._eventSource.close();
@@ -116,7 +126,6 @@ export class Client {
         this._eventSource.addEventListener('message', this._recvEvent)
         this._eventSource.addEventListener('error', (event) => {console.log(event)})
         //#endregion
-        await SFX.loadSounds()
         Client.log('Client Loaded!')
         Client._emitter.emit('load')
 
@@ -151,12 +160,12 @@ export class Client {
             Client._setPlayers(data.clients)
         } 
         else if (data.id === 'goto-overworld') {
-            setGlobalScene('overworld')
+            if(globalScene !== 'deck' && globalScene !== 'overworld') setGlobalScene('overworld')
         }
         else if (data.id === 'start-battle') {
             // console.log(data.battle)
             setGlobalScene('combat')
-            SFX.play('start-battle')
+            if(!data.notNew) SFX.play('start-battle')
 
             await wait(150)
             Client._onBattleUpdate(data.battle as Battle)
@@ -166,7 +175,7 @@ export class Client {
         }
         else if (data.id === 'end-battle') {
             Client.log(data.type + ': ' + data.condition)
-            setGlobalScene('overworld')
+            Client._emitter.emit('end-battle', data.type, data.condition)
         }
     }
 

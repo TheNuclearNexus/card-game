@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, Modal, Text, Image, StyleSheet, TouchableHighlight, TouchableOpacity } from "react-native";
 import { wait } from "../../util/async";
+import { url } from "../../util/global_data";
 import { getCenter } from "../../util/screen";
 import Card, { cardDatabase } from "../interfaces/Card";
-import { url } from "../objects/Client";
 import { row1Cards, row2Cards, setCardToPlay } from "./Card";
 const styles = StyleSheet.create({
     cardShape: {
@@ -20,6 +20,7 @@ export default function HandCard(props: { card: Card, idx: number }) {
     const [selected, setSelected] = useState<boolean>(false)
     const [showInfo, setShowInfo] = useState<boolean>(false)
     const reset = () => {
+        setCardToPlay(-1, () => {})
         handCards.forEach(s => s(false))
 
         row1Cards.forEach(s => s(false))
@@ -79,7 +80,7 @@ export default function HandCard(props: { card: Card, idx: number }) {
                 }
             }>
                 <View style={[styles.cardShape, { backgroundColor: "transparent", borderColor: selected ? '#ffa502' : '#ff4757', borderWidth: 4, borderRadius: 8 }]}>
-                    <Image source={{ uri: url + '/images?name=' + card.name }} style={{ width: '100%', height: '100%' }} />
+                    <Image source={{ uri: url + '/images?name=' + card.name }} style={{ width: '100%', height: '100%', backgroundColor: '#2f3542' }} />
                 </View>
             </TouchableOpacity>
             {cardStatsModal}

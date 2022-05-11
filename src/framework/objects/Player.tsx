@@ -9,7 +9,7 @@ import Circle from "../components/Circle";
 import { BaseObject } from "./BaseObject";
 import { Client } from "./Client";
 
-const maxDiameter = combatRange * pixelsInMeter
+const maxDiameter = combatRange * pixelsInMeter * 2
 let curDiameter = 30
 
 const styles = StyleSheet.create({
