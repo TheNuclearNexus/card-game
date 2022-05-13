@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
 
 
 //hi
-function rowToCards(row: Row, mine: boolean, type: number, reverse?: boolean) {
+function rowToCards(row: Row, mine: boolean, type: number, backRow?: Row, reverse?: boolean) {
     return [
-        <Card idx={0} key={`${mine}${type}0`} card={row[0]} mine={mine} type={type} />,
-        <Card idx={1} key={`${mine}${type}1`} card={row[1]} mine={mine} type={type} />,
-        <Card idx={2} key={`${mine}${type}2`} card={row[2]} mine={mine} type={type} />,
-        <Card idx={3} key={`${mine}${type}3`} card={row[3]} mine={mine} type={type} />
+        <Card idx={0} key={`${mine}${type}0`} card={row[0]} row2Card={backRow ? backRow[0] : undefined} mine={mine} type={type} />,
+        <Card idx={1} key={`${mine}${type}1`} card={row[1]} row2Card={backRow ? backRow[1] : undefined} mine={mine} type={type} />,
+        <Card idx={2} key={`${mine}${type}2`} card={row[2]} row2Card={backRow ? backRow[2] : undefined} mine={mine} type={type} />,
+        <Card idx={3} key={`${mine}${type}3`} card={row[3]} row2Card={backRow ? backRow[3] : undefined} mine={mine} type={type} />
     ]
 }
 
@@ -174,11 +174,11 @@ export default function Combat() {
                     {rowToCards(op.row2, false, 2)}
                 </View>
                 <View style={[styles.row, { backgroundColor: "#a4b0be", borderBottomLeftRadius: 8, borderBottomRightRadius: 8, borderColor: '#1e90ff', borderBottomWidth: 4 }]}>
-                    {rowToCards(op.row1, false, 1)}
+                    {rowToCards(op.row1, false, 1, op.row2)}
                 </View>
                 <View style={{ height: 5 }} />
                 <View style={[styles.row, { backgroundColor: "#a4b0be", borderTopLeftRadius: 8, borderTopRightRadius: 8, borderColor: '#ff4757', borderTopWidth: 4 }]}>
-                    {rowToCards(me.row1, true, 1)}
+                    {rowToCards(me.row1, true, 1, me.row2)}
                 </View>
                 <View style={[styles.row, { backgroundColor: "#747d8c", borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }]}>
                     {rowToCards(me.row2, true, 2)}

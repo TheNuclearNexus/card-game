@@ -20,7 +20,7 @@ export default function HandCard(props: { card: Card, idx: number }) {
     const [selected, setSelected] = useState<boolean>(false)
     const [showInfo, setShowInfo] = useState<boolean>(false)
     const reset = () => {
-        setCardToPlay(-1, () => {})
+        setCardToPlay(-1, () => { })
         handCards.forEach(s => s(false))
 
         row1Cards.forEach(s => s(false))
@@ -62,9 +62,15 @@ export default function HandCard(props: { card: Card, idx: number }) {
         </View>
     </Modal>;
 
+    function SmallStat({ cur }: { cur: number }) {
+        return <View style={{ backgroundColor: '#2f3542', padding: 1, borderRadius: 8 }}>
+            <Text style={{ color: '#ffa502' }}>{cur}</Text>
+        </View>
+    }
+
     return (
         <View>
-            <TouchableOpacity 
+            <TouchableOpacity
                 onPressIn={() => setShowInfo(true)}
                 onPressOut={() => setShowInfo(false)}
                 onPress={(event) => {
@@ -78,9 +84,15 @@ export default function HandCard(props: { card: Card, idx: number }) {
                         reset()
                     }
                 }
-            }>
+                }>
                 <View style={[styles.cardShape, { backgroundColor: "transparent", borderColor: selected ? '#ffa502' : '#ff4757', borderWidth: 4, borderRadius: 8 }]}>
                     <Image source={{ uri: url + '/images?name=' + card.name }} style={{ width: '100%', height: '100%', backgroundColor: '#2f3542' }} />
+                    <View style={{ position: 'absolute', top: 0, flexDirection: 'row', justifyContent: 'space-between', width: '100%', padding: 4 }}>
+                        {card.type === 2 &&
+                        <SmallStat cur={card.HP}/>}
+                        <SmallStat cur={card.AP}/>
+                        <SmallStat cur={card.DP}/>
+                    </View>
                 </View>
             </TouchableOpacity>
             {cardStatsModal}

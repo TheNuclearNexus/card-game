@@ -130,7 +130,7 @@ export default function Overworld() {
           <Text style={{ 'color': 'white', fontSize: 20 }}>{error}</Text>
         </View>}
       <TouchableOpacity style={{
-        position: 'absolute', bottom: 32, left: 32, backgroundColor: '#ffa502',
+        position: 'absolute', bottom: 32, left: 32, backgroundColor: '#ff4757',
         width: 64, height: 64, borderRadius: 8, justifyContent: 'center', alignItems: 'center'
       }} onPress={() => {
         setGlobalScene('deck')
